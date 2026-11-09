@@ -4,5 +4,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 results/**/final_model.joblib
+!results/full/final_model.joblib
 *.zip
 .coverage
+report/.preview/
+results/runs/
