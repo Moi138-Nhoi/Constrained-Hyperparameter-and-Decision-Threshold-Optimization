@@ -1,0 +1,22 @@
+{
+  "seed": 42,
+  "stability_seeds": [42, 43, 44],
+  "folds": 3,
+  "trials_per_method": 40,
+  "fpr_limits": [0.01, 0.02, 0.05],
+  "primary_fpr_limit": 0.05,
+  "max_model_mb": 20.0,
+  "max_latency_ratio": 1.25,
+  "latency_batch_size": 256,
+  "latency_warmup": 3,
+  "latency_repeats": 9,
+  "run_ablation": true,
+  "search_space": {
+    "n_estimators": [50, 100, 150, 200],
+    "max_depth": [4, 6, 8, 12, null],
+    "min_samples_split": [2, 5, 10],
+    "min_samples_leaf": [1, 2, 4],
+    "max_features": ["sqrt", "log2", 0.75],
+    "class_weight": [null, "balanced", "balanced_subsample"]
+  }
+}
