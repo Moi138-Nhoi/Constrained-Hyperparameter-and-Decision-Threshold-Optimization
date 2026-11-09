@@ -1,0 +1,136 @@
+{
+  "run_type": "full",
+  "config": {
+    "seed": 42,
+    "stability_seeds": [
+      42,
+      43,
+      44
+    ],
+    "folds": 3,
+    "trials_per_method": 40,
+    "fpr_limits": [
+      0.01,
+      0.02,
+      0.05
+    ],
+    "primary_fpr_limit": 0.05,
+    "max_model_mb": 20.0,
+    "max_latency_ratio": 1.25,
+    "latency_batch_size": 256,
+    "latency_warmup": 3,
+    "latency_repeats": 15,
+    "run_ablation": true,
+    "search_space": {
+      "n_estimators": [
+        50,
+        100,
+        150,
+        200
+      ],
+      "max_depth": [
+        4,
+        6,
+        8,
+        12,
+        null
+      ],
+      "min_samples_split": [
+        2,
+        5,
+        10
+      ],
+      "min_samples_leaf": [
+        1,
+        2,
+        4
+      ],
+      "max_features": [
+        "sqrt",
+        "log2",
+        0.75
+      ],
+      "class_weight": [
+        null,
+        "balanced",
+        "balanced_subsample"
+      ]
+    }
+  },
+  "dataset_audit": {
+    "csv_path": "C:\\Minh_Here\\Elearning\\NhapMonToiUuHoa\\BT_Lon\\repo_remote\\ai4i+2020+predictive+maintenance+dataset\\ai4i2020.csv",
+    "sha256": "dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e",
+    "rows": 10000,
+    "columns": [
+      "UDI",
+      "Product ID",
+      "Type",
+      "Air temperature [K]",
+      "Process temperature [K]",
+      "Rotational speed [rpm]",
+      "Torque [Nm]",
+      "Tool wear [min]",
+      "Machine failure",
+      "TWF",
+      "HDF",
+      "PWF",
+      "OSF",
+      "RNF"
+    ],
+    "class_counts": {
+      "0": 9661,
+      "1": 339
+    },
+    "missing_cells": 0,
+    "label_flag_or_mismatches": 27,
+    "sequential_70_15_15_hdf_counts_diagnostic_only": {
+      "train": 115,
+      "validation": 0,
+      "test": 0
+    },
+    "duplicate_rows": 0,
+    "type_counts": {
+      "H": 1003,
+      "L": 6000,
+      "M": 2997
+    },
+    "features": [
+      "Type",
+      "Air temperature [K]",
+      "Process temperature [K]",
+      "Rotational speed [rpm]",
+      "Torque [Nm]",
+      "Tool wear [min]"
+    ]
+  },
+  "split": {
+    "method": "stratified train_test_split",
+    "test_fraction": 0.2,
+    "development_rows": 8000,
+    "test_rows": 2000,
+    "development_positives": 271,
+    "fold_method": "StratifiedKFold(shuffle=True)",
+    "folds": 3,
+    "test_positives": 68
+  },
+  "runtime": {
+    "python": "3.14.7",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 154 Stepping 4, GenuineIntel",
+    "packages": {
+      "numpy": "2.5.4",
+      "pandas": "3.0.6",
+      "scikit-learn": "1.9.1",
+      "optuna": "4.9.0",
+      "matplotlib": "3.11.2",
+      "joblib": "1.6.0",
+      "threadpoolctl": "3.7.0"
+    },
+    "rf_n_jobs": 1,
+    "threadpool_limit": 1
+  },
+  "measurement": "Per fold: 3 candidate/reference warmups, then 15 paired ABBA/B A A B rounds, each with two calls per model on the same first 256 validation rows. One CPU thread. Constraint uses median of all fold-round candidate/reference ratios; q25, q75, MAD, fold medians and raw rounds are logged. Size is maximum uncompressed joblib bytes across folds.",
+  "started_utc": "2026-11-09T08:55:40.135185+00:00",
+  "completed_utc": "2026-11-09T09:18:55.706704+00:00",
+  "wall_seconds": 1396.2379555000007
+}
