@@ -9,7 +9,7 @@
   "max_latency_ratio": 1.25,
   "latency_batch_size": 256,
   "latency_warmup": 3,
-  "latency_repeats": 9,
+  "latency_repeats": 15,
   "run_ablation": true,
   "search_space": {
     "n_estimators": [50, 100, 150, 200],
