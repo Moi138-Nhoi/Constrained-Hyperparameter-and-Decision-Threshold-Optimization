@@ -1,0 +1,39 @@
+{
+  "archive_sha256": "3ccb9e4bb4cba4f5fe3052af7142b21067851d8b4aca56ce974cdb1ee1296c48",
+  "archive_name": "BT_Lon(1).zip",
+  "legacy_readme_claimed_search_counts": {
+    "random_search": 21,
+    "optuna_tpe": 23
+  },
+  "legacy_summary_search_counts": {
+    "random_search": 10,
+    "optuna_tpe": 0
+  },
+  "legacy_readme_summary_mismatch": true,
+  "legacy": {
+    "status": "final_refit_resource_violation",
+    "selected_method": "random_search",
+    "selected_trial": 2,
+    "oof_f2": 0.7673090649536045,
+    "test_f2": 0.748587570621469,
+    "final_latency_ratio": 1.326695045365759,
+    "final_model_size_mb": 2.06325,
+    "latency_cap": 1.25
+  },
+  "official": {
+    "status": "complete",
+    "selected_method": "random_search",
+    "selected_trial": 35,
+    "oof_f2": 0.7742155525238745,
+    "test_f2": 0.7493188010899182,
+    "final_latency_ratio": 0.9514633152391377,
+    "final_model_size_mb": 1.11733,
+    "latency_cap": 1.25,
+    "search_counts": {
+      "random_search": 23,
+      "optuna_tpe": 31
+    },
+    "wall_seconds": 1396.2379555000007
+  },
+  "note": "Legacy README and legacy summary are different run histories. The legacy final refit violates the 1.25 latency cap and is not a feasible result. The new test was evaluated only after development selection and a feasible refit. The older pilot had already viewed this test, so it is not strictly blind."
+}

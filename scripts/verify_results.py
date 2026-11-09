@@ -67,7 +67,7 @@ def render_results(summary: dict, manifest: dict, baselines: pd.DataFrame,
                   f"threshold **{selected['threshold']:.6f}**. "
                   f"Development OOF F₂ was **{selected['f2']:.4f}**, FPR "
                   f"**{selected['fpr']:.4f}**. "
-                  f"Refit fallback used: **{summary['fallback_used']}**. "])
+                  f"Refit fallback used: **{summary['fallback_used']}**."])
     if len(best_by_method) == 2:
         left, right = best_by_method.values()
         if (left["params_json"] == right["params_json"] and

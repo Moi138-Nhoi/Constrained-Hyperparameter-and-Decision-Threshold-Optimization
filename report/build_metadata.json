@@ -1,0 +1,15 @@
+{
+  "source_summary_sha256": "4e04539d8fc08d3bae7dbba2a0788d0b414a87555ea1d64609ef89bcb14c5cb8",
+  "source_results": "results\\full",
+  "report_pdf": "bao_cao_do_an_ai4i.pdf",
+  "report_pages": 10,
+  "defense_summary_pdf": "tom_tat_bao_ve_1_trang.pdf",
+  "defense_summary_pages": 1,
+  "placeholders": [
+    "student_name",
+    "student_id",
+    "lecturer",
+    "class",
+    "LMS_link"
+  ]
+}
