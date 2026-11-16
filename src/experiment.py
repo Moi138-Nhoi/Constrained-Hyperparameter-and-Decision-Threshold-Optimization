@@ -28,12 +28,12 @@ from .modeling import best_threshold, classification_metrics, make_model, model_
 
 def save_json(path: Path, obj: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
+    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8", newline="\n")
 
 
 def save_rows(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(rows).to_csv(path, index=False, encoding="utf-8")
+    pd.DataFrame(rows).to_csv(path, index=False, encoding="utf-8", lineterminator="\n")
 
 
 def make_folds(y: np.ndarray, seed: int, n_splits: int):

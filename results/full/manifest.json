@@ -58,8 +58,8 @@
     }
   },
   "dataset_audit": {
-    "csv_path": "C:\\Minh_Here\\Elearning\\NhapMonToiUuHoa\\BT_Lon\\repo_remote\\ai4i+2020+predictive+maintenance+dataset\\ai4i2020.csv",
-    "sha256": "dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e",
+    "csv_path": "ai4i+2020+predictive+maintenance+dataset/ai4i2020.csv",
+    "sha256": "59db4f1d9c34c58136d89e5a006ec190dcea19e9dbea74f6b3b0c6f22a44d183",
     "rows": 10000,
     "columns": [
       "UDI",
@@ -101,7 +101,8 @@
       "Rotational speed [rpm]",
       "Torque [Nm]",
       "Tool wear [min]"
-    ]
+    ],
+    "original_run_sha256_crlf": "dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e"
   },
   "split": {
     "method": "stratified train_test_split",
@@ -132,5 +133,9 @@
   "measurement": "Per fold: 3 candidate/reference warmups, then 15 paired ABBA/B A A B rounds, each with two calls per model on the same first 256 validation rows. One CPU thread. Constraint uses median of all fold-round candidate/reference ratios; q25, q75, MAD, fold medians and raw rounds are logged. Size is maximum uncompressed joblib bytes across folds.",
   "started_utc": "2026-11-09T08:55:40.135185+00:00",
   "completed_utc": "2026-11-09T09:18:55.706704+00:00",
-  "wall_seconds": 1396.2379555000007
+  "wall_seconds": 1396.2379555000007,
+  "artifact_packaging": {
+    "newline_policy": "UTF-8 / LF; .gitattributes enforces LF on checkout",
+    "note": "Only line endings and byte provenance changed; parsed data, model, experiment and timings are retained from the original run."
+  }
 }
