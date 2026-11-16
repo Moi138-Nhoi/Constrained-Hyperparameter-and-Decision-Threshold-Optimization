@@ -1,15 +1,54 @@
 {
-  "source_summary_sha256": "4e04539d8fc08d3bae7dbba2a0788d0b414a87555ea1d64609ef89bcb14c5cb8",
-  "source_results": "results\\full",
+  "source_summary_sha256": "4e2d126eb0ca7ed0230414329952e3fc636d9db85776736eddf17167465bff25",
+  "report_docx": "bao_cao_do_an_ai4i.docx",
   "report_pdf": "bao_cao_do_an_ai4i.pdf",
-  "report_pages": 10,
+  "defense_summary_docx": "tom_tat_bao_ve_1_trang.docx",
   "defense_summary_pdf": "tom_tat_bao_ve_1_trang.pdf",
-  "defense_summary_pages": 1,
-  "placeholders": [
-    "student_name",
-    "student_id",
-    "lecturer",
-    "class",
-    "LMS_link"
-  ]
+  "pages": {
+    "bao_cao_do_an_ai4i.pdf": 12,
+    "tom_tat_bao_ve_1_trang.pdf": 1
+  },
+  "source_hashes": {
+    "ai4i+2020+predictive+maintenance+dataset/ai4i2020.csv": "59db4f1d9c34c58136d89e5a006ec190dcea19e9dbea74f6b3b0c6f22a44d183",
+    "config.json": "3d9f2f9266d59741da290c7568f131f735231db8cade8095d56a6063e87ac20f",
+    "data/eol_migration.json": "f7649bc90c92876677bf794dcc29c134a6b1d26c9c15f911cd49127ad37bbd18",
+    "report/assets/cover_motif.png": "ad5f23f331c4aab1209816823ab69d5aeed1fe7ea30efd0ca64f3ef4f9b7e93a",
+    "report/assets/original_p1_1.jpeg": "576d52bc0854cccd2f8899490bf1200d5645e8021bfbde345da4823884483237",
+    "report/assets/original_p5_1.jpeg": "519be79fb33dbe0bc559e9dd30725f0137cd2b239f2509e0971c44876e9da870",
+    "report/assets/original_p6_1.jpeg": "64aca093a99b075c282a34058b6cafd1ff013ae2d1865e7abe379026d59a70fb",
+    "report/assets/original_p7_1.jpeg": "ac510aacc3fff2f7df2057377e57219ee49ca457b850ecfce91f68e7d98ba923",
+    "report/assets/original_p8_1.jpeg": "473ffbb57b97c2ef631e1e0ef3981ad7efec5754c13f91fd48f35acdbb39c2ef",
+    "report/assets/provenance.json": "4f1908bd896626544cbdce493feb00d75245001f2f8caa5db3e11c3a3d8d8b8c",
+    "report/identity.json": "a9db2fd4edff33873a4707beabbb165ad3f7b4fa869553f927d2a3ffe771f037",
+    "requirements-report.txt": "92ac4b6fdf544223b30a2f2ffa04b0b13f65e54d90050b2e96efdb875eb5ac32",
+    "requirements.txt": "bc0b7a63130e2c59850415acf5b9fee38b48cf50be58f4454654d197c8c1c6bd",
+    "results/full/ablation.csv": "638305eaeb751fd81500b84504c8b6ee108578468f4f32f5f4c234a3f4ee0715",
+    "results/full/baselines.csv": "ed6e8c7bd68e282290836f5d3c9cebe703c43d968ce7d64bf24eb0c2805c6395",
+    "results/full/candidate_ranking.csv": "5d110a3f7d65869bb0bfbfb972921c84414f98c2faa01d10185f5091dec08ddb",
+    "results/full/figures/f2_fpr.png": "7ed041736f1002d6d275a9a3911637d1a855b5f385592a6d6f143bbd545e148d",
+    "results/full/figures/optimization_history.png": "5641bb4ff037c47cdb168b3cfdfcafdac5d7c0aec6dc4016d7f6a05edf1f0240",
+    "results/full/final_model.joblib": "9eaa68cd0b961d1ca5996c1b385d4e2a406f830bf41814605dbce0ff9edbd59d",
+    "results/full/fold_assignments.csv": "9353371fa17f9ac649695fa5cbd65154526adbb55a36f1f95a8b2aa2b5bf0282",
+    "results/full/manifest.json": "20ca9c3a63331709b73cbdc4ffd67a791270c2c41f19f7f1449571b4d6520d49",
+    "results/full/refit_attempts.csv": "d2a81e72dd859c7796c45dd7af9c081d3d004de771a6520577dbc70a6aa3ca73",
+    "results/full/sensitivity.csv": "1fca46453c5ec160523a28b10578ee5eb658d80fadd3b0096eee622938d7cb81",
+    "results/full/split_assignments.csv": "ee3e3d87d5d190f23738644784b48e2d5cdd75443978ffb01500bc2ebb6c7dc5",
+    "results/full/stability.csv": "bb3fbba23d047db49677df8013394033d7a26d4f5b122ff367f93798a34b7af6",
+    "results/full/summary.json": "4e2d126eb0ca7ed0230414329952e3fc636d9db85776736eddf17167465bff25",
+    "results/full/trials.csv": "620605a4b88ede07a8f3e5e0e7af5b41272bda65e0eb0e87bfcc9e403cab5f80",
+    "scripts/build_report.py": "41fd2857057802cfce5184c182a94493415dd7633ea2df0908625a6ac68060b8",
+    "scripts/export_report.ps1": "5830e6e72f056a58ff9a606b17b933b9c0a98eaf9de1b233a23829bf131ff669",
+    "src/__init__.py": "f35180b4814cc6549ac23bc664ba831798966f15a5a70ec775a230b0786de09e",
+    "src/data.py": "73b1bdd3ba3dacd489a1f59268a8332a9282f91b514598e0b94f6eeaf927d095",
+    "src/experiment.py": "b130deb27ba0c7d66c211da7e68b6fd3fbb14058ea823c49784777661b3210aa",
+    "src/latency.py": "97db528346d3feddb69948933abad0a4170b6bdec761b097b1b949bdcec0875f",
+    "src/modeling.py": "e12009d98663f907502b1b402333aa83ec6e58f3c16c194d3f63363e910f7e7f"
+  },
+  "output_hashes": {
+    "bao_cao_do_an_ai4i.docx": "f6b9648bb82554e15a86090aa518fb59879d3b6ce6ff375d8801e2eddda561b7",
+    "bao_cao_do_an_ai4i.pdf": "61d18141837e53d914a7475a81a97af1bd75f243accde670056a83193861d3a7",
+    "tom_tat_bao_ve_1_trang.docx": "7a5f6a382f233c5bea0abeb79f1b108cd7ec3545d6e333f7bd2f27313e1d6cf6",
+    "tom_tat_bao_ve_1_trang.pdf": "a87dd74055d7b863cb1b82baa2be2bd3a025de48e17f8712e7e5f6d586be375f"
+  },
+  "note": "PDFs exported from editable DOCX; retained official run, LF bytes, no retraining."
 }

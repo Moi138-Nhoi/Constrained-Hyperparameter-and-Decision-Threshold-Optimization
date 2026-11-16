@@ -1,0 +1,12 @@
+{
+  "source_pdf": "Bao_Caopdf.pdf in user-supplied ZIP",
+  "source_pdf_sha256": "b3fb85e16cac2d4f76f7dd6d1a27b09790a16f7dc16f309c63fbd27bfadcf925",
+  "assets": {
+    "cover_motif.png": "Page 1 frame/logo; remove text and underline so DOCX text stays editable.",
+    "original_p1_1.jpeg": "Original embedded logo, page 1.",
+    "original_p5_1.jpeg": "Original embedded optimization history, page 5; results/full/trials.csv.",
+    "original_p6_1.jpeg": "Original embedded F2/FPR plot, page 6; results/full/trials.csv.",
+    "original_p7_1.jpeg": "Original embedded baseline/trial log, page 7; baselines.csv and trials.csv.",
+    "original_p8_1.jpeg": "Original embedded final evaluation log, page 8; summary.json and refit_attempts.csv."
+  }
+}

@@ -55,7 +55,9 @@ The methods found different best candidates in this run; one budget and one spli
 See [sensitivity](results/full/sensitivity.csv), [stability](results/full/stability.csv), [ablation](results/full/ablation.csv), and [refit attempts](results/full/refit_attempts.csv).
 <!-- GENERATED_RESULTS_END -->
 
-Read the [10-page report](report/bao_cao_do_an_ai4i.pdf), [one-page defense summary](report/tom_tat_bao_ve_1_trang.pdf), and [supplied ZIP versus official run comparison](report/archive_comparison.md). Identity, class, lecturer and LMS fields are explicitly marked `[CẦN ĐIỀN]` in the report.
+Read the final **12-page report** ([editable Word](report/bao_cao_do_an_ai4i.docx), [PDF](report/bao_cao_do_an_ai4i.pdf)) and **one-page defense summary** ([Word](report/tom_tat_bao_ve_1_trang.docx), [PDF](report/tom_tat_bao_ve_1_trang.pdf)). This is the single final document set. The report retains the supplied cover motif and four actual-run images, and covers all seven required sections.
+
+The supplied cover identifies **Huỳnh Trí Minh — 24748020102035 — GVHD Nguyễn Thị Diễm Anh**. [Identity provenance](report/identity.json) records that source; the previous GitHub report contained placeholders, not conflicting names. No class code or LMS identifier was supplied. See the [current ZIP audit](report/archive_comparison.md) and [course requirement mapping](report/requirements_audit.md).
 
 ## How to Run
 
@@ -65,18 +67,35 @@ On Windows PowerShell with Python 3.14 and `uv` (adjust the Python version if su
 uv --cache-dir .uv-cache venv --python 3.14 .venv
 uv --cache-dir .uv-cache pip install --python .venv\Scripts\python.exe -r requirements.txt
 .venv\Scripts\python.exe -m unittest discover -s tests -v
+.venv\Scripts\python.exe scripts\verify_results.py
+```
+
+These two commands validate the committed experiment without changing files. To run a new experiment:
+
+```powershell
 .venv\Scripts\python.exe run.py
 ```
 
-`run.py` works from any working directory and creates a fresh timestamped directory in `results/runs/` by default. To use a named official output, run `.venv\Scripts\python.exe run.py --output-dir results/full` only when that directory is empty. For a development-only pilot, use `.venv\Scripts\python.exe run.py --pilot --trials 2`; pilot skips test. `--config`, `--data`, `--trials` and `--output-dir` are supported. Relative paths resolve from the project root. Check a completed official run and update the README block with:
+`run.py` works from any working directory and creates a fresh timestamped directory in `results/runs/` by default; it refuses a nonempty output directory. Preserve `results/full` as the submitted run. For a development-only pilot, run `.venv\Scripts\python.exe run.py --pilot --trials 2`; pilot skips test. `--config`, `--data`, `--trials` and `--output-dir` are supported. Relative paths resolve from the project root. The official full run took 1,396.24 seconds; hardware and load affect subsequent timings.
+
+The report sources are editable in `scripts/build_report.py`. Rebuild documents from the submitted run with the extra reporting dependencies and Microsoft Word on Windows:
 
 ```powershell
-.venv\Scripts\python.exe scripts\verify_results.py --results-dir results/full --write-readme
-.venv\Scripts\python.exe scripts\verify_results.py --results-dir results/full
+uv --cache-dir .uv-cache pip install --python .venv\Scripts\python.exe -r requirements-report.txt
 .venv\Scripts\python.exe scripts\build_report.py --results-dir results/full --output-dir report
+powershell -NoProfile -File scripts\export_report.ps1
+# Inspect both exported PDFs before recording their actual source/output hashes.
+.venv\Scripts\python.exe scripts\build_report.py --finalize-pdfs
+.venv\Scripts\python.exe scripts\verify_results.py
 ```
 
-`manifest.json` records Python, dependency versions, OS/processor, CPU setting, split, seed and wall time. Feasibility near the latency boundary may vary across CPUs and system load.
+LibreOffice can also export DOCX to PDF; its layout must be inspected separately. Report generation is optional for checking the committed results. `--write-readme` explicitly regenerates only the marked results block after verification; the default verifier is read-only.
+
+`.gitattributes` enforces LF for text even when Windows has `core.autocrlf=true`. The CSV and JSON hashes are exact byte hashes; mismatches are rejected. [Migration evidence](data/eol_migration.json) records the old CRLF and current LF CSV hashes. The manifests retain the original experiment date/runtime; only packaging provenance changed. [Report metadata](report/build_metadata.json) hashes the actual logs, model, assets, source code and four DOCX/PDF outputs. A changed source or report requires a genuine rebuild, not disabling a check.
+
+To produce an exact submission ZIP from a clean committed tree, run `python scripts/package_submission.py --output-dir ../submission`. It uses `git archive HEAD`, verifies every ZIP entry against the Git tree and writes a separate inventory with SHA-256 values. ZIPs are kept outside the repository to avoid a self-referential commit. GitHub's **Code → Download ZIP** is also available; a commit-specific archive is preferable for a fixed submission.
+
+`manifest.json` records Python, dependency versions, OS/processor, CPU setting, split, seed and wall time. The original log identifies an Intel64 Family 6 Model 154 Stepping 4 CPU and Windows 11, but does not record a commercial CPU name or RAM. No missing hardware details are inferred. The saved stability analysis changes RF seeds 42/43/44 while retaining folds and threshold; it is not three independent optimizer runs.
 
 ## Repository Structure
 
@@ -87,7 +106,7 @@ uv --cache-dir .uv-cache pip install --python .venv\Scripts\python.exe -r requir
 | `tests/` | Dataset, preprocessing, metric, timing and fallback checks |
 | `scripts/verify_results.py` | Artifact and README consistency check |
 | `results/full/`, `results/pilot/` | Official and clearly labelled pilot logs/figures |
-| `report/` | 10-page PDF report, one-page defense summary, ZIP comparison |
+| `report/` | Final 12-page DOCX/PDF, one-page DOCX/PDF, source assets, audit and metadata |
 | `ai4i+2020+predictive+maintenance+dataset/` | Attributed original UCI CSV |
 
 The raw ZIP, `.venv*`, `.uv-cache`, secrets, temporary files and other model binaries are excluded from Git. The verified official model is about 1.1 MB and is included with CSV/JSON results and figures, so the consistency check can load it after cloning. Commits in this reconstruction record real work done now; no historical dates are fabricated.
@@ -100,7 +119,9 @@ The raw ZIP, `.venv*`, `.uv-cache`, secrets, temporary files and other model bin
 - Paired median timing reduces transient order/load effects but cannot remove hardware dependence. Raw rounds and dispersion are retained; near-boundary feasibility may still vary.
 - Uncompressed `joblib` bytes are a file-size proxy, not RAM usage. Threshold-comparison overhead is omitted from the timed `predict_proba` call.
 - One split and one 40-trial budget do not establish general superiority of either optimizer. Nested evaluation and independent datasets would provide stronger evidence.
+- The six original commits are all dated **9 November 2026**. They do not demonstrate the required five-week progression; later completion commits record actual work and do not repair that historical gap. Dates and results are not fabricated.
+- LMS submission, profile pinning, administrative confirmation and the student's oral defense are not verified by this repository.
 
 ## AI assistance
 
-OpenAI Codex assisted with code, tests, documentation and artifact generation. The student must inspect the source, reproduce the run, confirm UCI attribution and explain every decision during defense. Identity or LMS placeholders in the report require student input.
+OpenAI Codex assisted with code review, tests, documentation and artifact generation. The student must inspect the source, reproduce the run, confirm the cover details and UCI attribution, and explain every decision during defense.
