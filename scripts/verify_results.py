@@ -39,19 +39,28 @@ def render_results(summary: dict, manifest: dict, baselines: pd.DataFrame,
                    trials: pd.DataFrame) -> str:
     cfg = manifest["config"]
     if summary["status"] != "complete":
-        return f"Run status: **{summary['status']}**. No valid final test result is claimed."
+        return f"Trạng thái lần chạy: **{summary['status']}**. Chưa có kết quả đánh giá cuối hợp lệ trên tập kiểm tra."
     selected, test = summary["selected_final"], summary["test"]
     lines = [
-        f"**Official run:** {cfg['trials_per_method']} Random Search + {cfg['trials_per_method']} "
-        "Optuna TPE trials, three fixed baselines and two OOF-threshold baselines. "
-        f"Feasible search trials: Random Search {summary['search_counts']['random_search']}, "
+        f"**Thực nghiệm chính thức:** {cfg['trials_per_method']} lượt Random Search + {cfg['trials_per_method']} "
+        "lượt Optuna TPE, ba mô hình cơ sở có ngưỡng cố định và hai mô hình cơ sở chọn ngưỡng từ OOF. "
+        f"Số lượt tìm kiếm khả thi: Random Search {summary['search_counts']['random_search']}, "
         f"TPE {summary['search_counts']['optuna_tpe']}.",
         "",
-        "| Development OOF candidate | F₂ | Recall | Precision | FPR | Threshold |",
+        "| Cấu hình trên OOF của tập phát triển | F₂ | Recall | Precision | FPR | Ngưỡng |",
         "|---|---:|---:|---:|---:|---:|",
     ]
+    labels = {
+        "dummy": "Dummy: luôn chọn lớp phổ biến nhất",
+        "rf_default": "RF mặc định, ngưỡng 0.5",
+        "rf_balanced": "RF cân bằng lớp, ngưỡng 0.5",
+        "rf_default_oof_threshold": "RF mặc định, ngưỡng OOF",
+        "rf_balanced_oof_threshold": "RF cân bằng lớp, ngưỡng OOF",
+        "random_search": "Random Search",
+        "optuna_tpe": "Optuna TPE",
+    }
     for _, row in baselines.iterrows():
-        lines.append(f"| {row['method']} | {row['f2']:.4f} | {row['recall']:.4f} | "
+        lines.append(f"| {labels.get(row['method'], row['method'])} | {row['f2']:.4f} | {row['recall']:.4f} | "
                      f"{row['precision']:.4f} | {row['fpr']:.4f} | {row['threshold']:.4f} |")
     best_by_method = {}
     for method in ("random_search", "optuna_tpe"):
@@ -60,48 +69,49 @@ def render_results(summary: dict, manifest: dict, baselines: pd.DataFrame,
             best = group.sort_values(["f2", "fpr", "model_size_mb", "latency_ratio"],
                                      ascending=[False, True, True, True]).iloc[0]
             best_by_method[method] = best
-            lines.append(f"| Best {method} (trial {int(best['trial'])}) | {best['f2']:.4f} | "
+            lines.append(f"| Tốt nhất của {labels[method]} (lượt #{int(best['trial'])}) | {best['f2']:.4f} | "
                          f"{best['recall']:.4f} | {best['precision']:.4f} | "
                          f"{best['fpr']:.4f} | {best['threshold']:.4f} |")
         else:
-            lines.append(f"| Best {method} | no feasible trial | — | — | — | — |")
-    lines.extend(["", f"The locked final decision came from **{selected['method']}**, trial "
-                  f"**{selected['trial']}**, with `params_json={selected['params_json']}` and "
-                  f"threshold **{selected['threshold']:.6f}**. "
-                  f"Development OOF F₂ was **{selected['f2']:.4f}**, FPR "
+            lines.append(f"| Tốt nhất của {labels[method]} | Không có lượt khả thi | — | — | — | — |")
+    lines.extend(["", "Chỉ số lượt thử được đánh số từ 0, giống cột `trial` trong log.", "",
+                  f"Nghiệm cuối đã chốt thuộc **{labels.get(selected['method'], selected['method'])}**, lượt "
+                  f"**#{selected['trial']}**, với `params_json={selected['params_json']}` và "
+                  f"ngưỡng **{selected['threshold']:.6f}**. "
+                  f"Trên OOF của tập phát triển, F₂ đạt **{selected['f2']:.4f}**, FPR "
                   f"**{selected['fpr']:.4f}**. "
-                  f"Refit fallback used: **{summary['fallback_used']}**."])
+                  f"Phải chuyển sang nghiệm dự phòng sau khi huấn luyện lại: **{'Có' if summary['fallback_used'] else 'Không'}**."])
     if len(best_by_method) == 2:
         left, right = best_by_method.values()
         if (left["params_json"] == right["params_json"] and
                 math.isclose(left["threshold"], right["threshold"], abs_tol=1e-12)):
-            lines.append("Both methods found the same best parameter and threshold decision; "
-                         "this run does not establish superiority of either optimizer.")
+            lines.append("Hai phương pháp tìm được cùng bộ siêu tham số và ngưỡng tốt nhất; "
+                         "lần chạy này chưa chứng minh phương pháp nào ưu việt hơn.")
         else:
-            lines.append("The methods found different best candidates in this run; "
-                         "one budget and one split do not establish general superiority.")
+            lines.append("Hai phương pháp tìm được các nghiệm tốt nhất khác nhau trong lần chạy này; "
+                         "một ngân sách và một cách chia dữ liệu chưa chứng minh ưu thế tổng quát của phương pháp nào.")
     lines.extend([
         "",
-        "**Held-out test, after development-only selection:** confusion matrix "
+        "**Đánh giá trên tập kiểm tra sau khi chọn nghiệm chỉ bằng tập phát triển:** ma trận nhầm lẫn "
         f"`[[{test['tn']}, {test['fp']}], [{test['fn']}, {test['tp']}]]` "
-        "(rows actual 0/1, columns predicted 0/1). "
-        f"F₂ **{test['f2']:.4f}**, recall **{test['recall']:.4f}**, "
-        f"precision **{test['precision']:.4f}**, FPR **{test['fpr']:.4f}**, "
-        f"average precision/PR-AUC **{test['average_precision']:.4f}**, "
-        f"accuracy **{test['accuracy']:.4f}**. "
-        f"Final uncompressed size **{test['model_size_mb']:.3f} MB** "
-        f"(limit {cfg['max_model_mb']} MB); paired latency ratio "
-        f"**{test['latency_ratio']:.3f}×** (limit {cfg['max_latency_ratio']}×), "
-        f"with q25–q75 **{test['latency_ratio_q25']:.3f}–{test['latency_ratio_q75']:.3f}×**.",
+        "(hàng là nhãn thực 0/1, cột là nhãn dự đoán 0/1). "
+        f"F₂ **{test['f2']:.4f}**, độ bao phủ (Recall) **{test['recall']:.4f}**, "
+        f"độ chính xác cảnh báo (Precision) **{test['precision']:.4f}**, FPR **{test['fpr']:.4f}**, "
+        f"AP/PR-AUC **{test['average_precision']:.4f}**, "
+        f"tỷ lệ dự đoán đúng (Accuracy) **{test['accuracy']:.4f}**. "
+        f"Kích thước mô hình cuối không nén **{test['model_size_mb']:.3f} MB** "
+        f"(giới hạn {cfg['max_model_mb']} MB); tỷ số độ trễ đo ghép cặp "
+        f"**{test['latency_ratio']:.3f}×** (giới hạn {cfg['max_latency_ratio']}×), "
+        f"khoảng phân vị q25–q75 **{test['latency_ratio_q25']:.3f}–{test['latency_ratio_q75']:.3f}×**.",
         "",
-        "![Optimization history](results/full/figures/optimization_history.png)",
+        "![Diễn biến tìm kiếm nghiệm khả thi tốt nhất](results/full/figures/optimization_history.png)",
         "",
-        "![F₂ versus FPR](results/full/figures/f2_fpr.png)",
+        "![Quan hệ giữa F₂ và tỷ lệ cảnh báo sai FPR](results/full/figures/f2_fpr.png)",
         "",
-        "See [sensitivity](results/full/sensitivity.csv), "
-        "[stability](results/full/stability.csv), "
-        "[ablation](results/full/ablation.csv), and "
-        "[refit attempts](results/full/refit_attempts.csv).",
+        "Xem [phân tích độ nhạy](results/full/sensitivity.csv), "
+        "[độ ổn định](results/full/stability.csv), "
+        "[thí nghiệm bổ sung đặc trưng](results/full/ablation.csv) và "
+        "[các lần huấn luyện lại](results/full/refit_attempts.csv).",
     ])
     return "\n".join(lines)
 

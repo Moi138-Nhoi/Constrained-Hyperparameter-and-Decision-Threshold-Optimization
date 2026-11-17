@@ -1,67 +1,100 @@
-# Constrained Random Forest for current machine-failure detection
+# Tối ưu Random Forest phát hiện lỗi máy có ràng buộc
 
-## Problem
+Đồ án môn **Nhập môn Tối ưu hóa**: lựa chọn siêu tham số Random Forest và ngưỡng cảnh báo để phát hiện lỗi máy trên AI4I 2020, đồng thời kiểm soát cảnh báo sai, kích thước mô hình và độ trễ suy luận.
 
-Detect `Machine failure=1` at the **current AI4I observation** using measurements already available then. This project does not predict a future failure horizon. It prioritizes failure recall through F₂ while limiting false alerts, serialized size and inference time. The 5% FPR, 20 MB and 1.25× latency caps are coursework assumptions, not industrial requirements.
+## Đặt vấn đề
 
-## Optimization Formulation
+Phát hiện nhãn `Machine failure=1` tại **thời điểm quan sát hiện tại** bằng các phép đo đã có lúc đó. Đồ án ưu tiên khả năng phát hiện lỗi thông qua F₂, đồng thời giới hạn cảnh báo sai và tài nguyên sử dụng. Các giới hạn FPR 5%, kích thước 20 MB và tỷ số độ trễ 1.25× là giả định của môn học, chưa phải yêu cầu được xác nhận từ một nhà máy. Bài toán chưa dự báo máy sẽ hỏng sau một khoảng thời gian trong tương lai.
 
-The decision is $(\lambda,\tau)$: six Random Forest hyperparameters (`n_estimators`, `max_depth`, `min_samples_split`, `min_samples_leaf`, `max_features`, `class_weight`) and alert threshold $\tau\in[0,1]$. For each configuration, fixed stratified folds produce one out-of-fold (OOF) probability per development row. We maximize $F_2=5TP/(5TP+4FN+FP)$ subject to $FPR=FP/(FP+TN)\le0.05$, largest fold model size $\le20$ decimal MB, and median paired latency ratio to default RF $\le1.25$. `config.json` defines the search space and 40 trials per method. The threshold search considers all distinct OOF scores and a no-alert threshold when possible. FPR caps 1% and 2% are separate sensitivity checks. No cap is silently loosened.
+## Mô hình hóa bài toán tối ưu
 
-## Dataset
+Biến quyết định là $(\lambda,\tau)$, gồm sáu siêu tham số Random Forest (`n_estimators`, `max_depth`, `min_samples_split`, `min_samples_leaf`, `max_features`, `class_weight`) và ngưỡng cảnh báo $\tau\in[0,1]$.
 
-[UCI AI4I 2020 Predictive Maintenance Dataset](https://archive.ics.uci.edu/dataset/601/ai4i%2B2020%2Bpredictive%2Bmaintenance%2Bdataset), DOI [10.24432/C5HS5C](https://doi.org/10.24432/C5HS5C), CC BY 4.0. UCI describes the data as **synthetic** and designed to resemble industrial maintenance data. The supplied CSV has 10,000 rows, 14 columns, 339 failures, 9,661 nonfailures and no missing cells. Its identifier is `UDI`. The original `Machine failure` label differs from the OR of the five failure-mode flags in 27 rows; labels are retained.
+Với mỗi cấu hình, các phần chia kiểm định chéo phân tầng cố định tạo ra một xác suất ngoài fold (**OOF — out-of-fold**) cho mỗi hàng của tập phát triển. Mỗi hàng được dự đoán bằng mô hình không huấn luyện trên chính hàng đó. Mục tiêu:
 
-Only `Type`, `Air temperature [K]`, `Process temperature [K]`, `Rotational speed [rpm]`, `Torque [Nm]` and `Tool wear [min]` enter `X`. `UDI`, `Product ID`, `TWF`, `HDF`, `PWF`, `OSF`, `RNF` and `Machine failure` are excluded. The CSV SHA-256 and audit are logged. A sequential 70/15/15 split would leave no HDF in validation or test, so it is a diagnostic only.
+$$\max_{\lambda,\tau} F_2=\frac{5TP}{5TP+4FN+FP}$$
 
-## Method
+với các ràng buộc:
 
-1. Lock a stratified 20% test split with seed 42. On the remaining 80%, use the same shuffled `StratifiedKFold(3)` assignments for every baseline and trial. Save split/fold indices.
-2. One-hot encode `Type` within each fold's training pipeline; pass numerical fields through. No SMOTE is used.
-3. Compare most-frequent Dummy, default RF at 0.5, balanced RF at 0.5, plus default and balanced RF with OOF-selected thresholds. This separates the effect of moving the threshold from changing hyperparameters.
-4. Give uniform categorical Random Search and seeded Optuna TPE the same 40-trial budget, search space and folds. TPE has 10 startup trials. Log all trials, including infeasible ones.
-5. For each fold, time the candidate and default RF on the same 256-row batch, one CPU thread: 3 warm-ups and 15 paired rounds of two calls per model. Alternate `candidate–reference–reference–candidate` with the reverse order. The median of all 45 fold-round ratios determines latency feasibility; q25, q75, MAD, fold medians and raw rounds are logged. Size is the largest uncompressed `joblib` fold-model size.
-6. Rank OOF-feasible decisions before test access by F₂ descending, FPR ascending, size ascending, paired ratio ascending, method and trial. Refit each unique decision on all development rows in that order. Compare each refit with a full-development default RF under the same paired protocol. If one fails size or latency, try the next; if none passes, report no feasible refit and skip test. Evaluate only the first feasible refit on test.
-7. With the decision fixed, check development-only stability on seeds 42, 43 and 44. An ablation adds temperature difference, mechanical power and torque × tool wear from current-observation fields; its result cannot replace the primary model.
+- Tỷ lệ cảnh báo sai $FPR=FP/(FP+TN)\le0.05$ trên dự đoán OOF.
+- Kích thước mô hình lớn nhất trong các fold không vượt **20 MB**, tính theo hệ thập phân và lưu `joblib` không nén.
+- Trung vị các tỷ số độ trễ đo ghép cặp so với Random Forest mặc định không vượt **1.25×**.
 
-OOF threshold tuning and many trial comparisons can make development scores optimistic. Average precision is the noninterpolated PR-AUC summary.
+`TP`, `FP`, `FN`, `TN` lần lượt là số lỗi được phát hiện đúng, số cảnh báo sai, số lỗi bị bỏ sót và số trường hợp bình thường được nhận diện đúng. **Recall** là độ bao phủ các trường hợp lỗi; **Precision** là tỷ lệ lỗi thật trong các cảnh báo; **Accuracy** là tỷ lệ dự đoán đúng trên toàn bộ mẫu.
 
-## Key Results
+`config.json` quy định miền tìm kiếm và ngân sách **40 lượt thử cho mỗi phương pháp**. Tìm kiếm ngưỡng xét mọi giá trị xác suất OOF phân biệt, cùng ngưỡng không phát cảnh báo khi tồn tại. Các mức FPR 1% và 2% được dùng riêng để phân tích độ nhạy; không tự nới ràng buộc khi không tìm được nghiệm.
 
-The block below is generated from `results/full` by `scripts/verify_results.py --write-readme`. The same script checks it against CSV, JSON, the saved model and resource caps.
+## Dữ liệu
+
+Sử dụng [UCI AI4I 2020 Predictive Maintenance Dataset](https://archive.ics.uci.edu/dataset/601/ai4i%2B2020%2Bpredictive%2Bmaintenance%2Bdataset), DOI [10.24432/C5HS5C](https://doi.org/10.24432/C5HS5C), giấy phép **CC BY 4.0**. UCI mô tả đây là **dữ liệu tổng hợp**, được thiết kế để mô phỏng dữ liệu bảo trì công nghiệp.
+
+CSV đi kèm có **10.000 hàng, 14 cột, 339 nhãn lỗi, 9.661 nhãn bình thường**, không có ô thiếu. Cột định danh là `UDI`. Có 27 hàng mà nhãn `Machine failure` khác phép OR của năm cờ nguyên nhân lỗi; đồ án giữ nguyên nhãn gốc.
+
+Chỉ sáu trường sau được đưa vào tập đặc trưng `X`:
+
+| Trường dữ liệu | Ý nghĩa |
+|---|---|
+| `Type` | Loại sản phẩm |
+| `Air temperature [K]` | Nhiệt độ không khí |
+| `Process temperature [K]` | Nhiệt độ quá trình |
+| `Rotational speed [rpm]` | Tốc độ quay |
+| `Torque [Nm]` | Mô-men xoắn |
+| `Tool wear [min]` | Thời gian mòn dụng cụ |
+
+Loại `UDI`, `Product ID`, `TWF`, `HDF`, `PWF`, `OSF`, `RNF` và `Machine failure` khỏi `X` để tránh đưa định danh, cờ nguyên nhân và nhãn vào đầu vào mô hình. SHA-256 và kết quả kiểm tra dữ liệu được lưu trong log. Phép chia tuần tự 70/15/15 khiến tập xác thực và tập kiểm tra không có HDF, nên chỉ dùng làm chẩn đoán.
+
+## Phương pháp thực hiện
+
+1. Tách riêng **20% dữ liệu làm tập kiểm tra (test)** bằng phép chia phân tầng, seed 42. Trên 80% còn lại — **tập phát triển (development)** — dùng cùng các chỉ số `StratifiedKFold(3)` có xáo trộn cho mọi mô hình cơ sở và lượt thử. Lưu đầy đủ chỉ số chia tập và fold.
+2. Mã hóa one-hot cho `Type` trong pipeline huấn luyện của từng fold; giữ nguyên các trường số. Không dùng SMOTE.
+3. So sánh **năm mô hình cơ sở (baseline)**: Dummy luôn chọn lớp phổ biến nhất; RF mặc định tại ngưỡng 0.5; RF cân bằng lớp tại ngưỡng 0.5; RF mặc định chọn ngưỡng từ OOF; RF cân bằng lớp chọn ngưỡng từ OOF. Cách so sánh này tách tác động của việc chỉnh ngưỡng khỏi tác động của việc đổi siêu tham số.
+4. **Random Search** lấy mẫu đều trên các lựa chọn rời rạc; **Optuna TPE** sử dụng seed cố định. Hai phương pháp có cùng miền tìm kiếm, fold và ngân sách 40 lượt. TPE có 10 lượt khởi tạo. Lưu mọi lượt thử, kể cả nghiệm không khả thi.
+5. Trong mỗi fold, đo cấu hình đang xét và RF mặc định trên cùng lô 256 hàng, một luồng CPU: 3 lượt làm nóng và 15 vòng ghép cặp, mỗi mô hình được gọi hai lần mỗi vòng. Luân phiên thứ tự `ứng viên–tham chiếu–tham chiếu–ứng viên` và thứ tự ngược lại. Trung vị của toàn bộ 45 tỷ số từ ba fold quyết định tính khả thi về độ trễ; lưu q25, q75, độ lệch tuyệt đối trung vị (MAD), trung vị từng fold và các phép đo thô. Kích thước là dung lượng `joblib` không nén lớn nhất trong các mô hình fold.
+6. **Trước khi đánh giá test**, xếp các nghiệm OOF khả thi theo F₂ giảm dần, FPR tăng dần, kích thước tăng dần, tỷ số độ trễ tăng dần, rồi tên phương pháp và chỉ số lượt thử. Huấn luyện lại từng nghiệm không trùng trên toàn bộ tập phát triển theo thứ tự này. So với RF mặc định huấn luyện trên cùng tập bằng giao thức đo ghép cặp. Nếu vi phạm kích thước hoặc độ trễ thì thử nghiệm kế tiếp; nếu không có nghiệm đạt yêu cầu thì báo không khả thi và bỏ qua test. Chỉ đánh giá nghiệm huấn luyện lại khả thi đầu tiên trên test.
+7. Khi đã chốt nghiệm, kiểm tra độ ổn định trên tập phát triển với các seed 42, 43 và 44. Thí nghiệm bổ sung đặc trưng thêm chênh lệch nhiệt độ, công suất cơ học và tích mô-men xoắn × thời gian mòn dụng cụ từ các trường cùng thời điểm; kết quả này không thay thế mô hình chính.
+
+Việc vừa chỉnh ngưỡng OOF vừa so sánh nhiều lượt thử có thể làm điểm trên tập phát triển lạc quan. Average precision (**AP**) được báo như đại lượng tóm tắt PR-AUC không nội suy. Lịch sử pilot từng xem cùng tập test được công bố ở phần **Hạn chế**.
+
+## Kết quả chính
+
+Khối dưới đây được sinh trực tiếp từ `results/full` bằng `scripts/verify_results.py --write-readme`. Cùng script này đối chiếu nội dung với CSV, JSON, mô hình đã lưu và các giới hạn tài nguyên. Các số thập phân giữ dấu chấm như trong log để thuận tiện đối chiếu.
 
 <!-- GENERATED_RESULTS_BEGIN -->
-**Official run:** 40 Random Search + 40 Optuna TPE trials, three fixed baselines and two OOF-threshold baselines. Feasible search trials: Random Search 23, TPE 31.
+**Thực nghiệm chính thức:** 40 lượt Random Search + 40 lượt Optuna TPE, ba mô hình cơ sở có ngưỡng cố định và hai mô hình cơ sở chọn ngưỡng từ OOF. Số lượt tìm kiếm khả thi: Random Search 23, TPE 31.
 
-| Development OOF candidate | F₂ | Recall | Precision | FPR | Threshold |
+| Cấu hình trên OOF của tập phát triển | F₂ | Recall | Precision | FPR | Ngưỡng |
 |---|---:|---:|---:|---:|---:|
-| dummy | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.5000 |
-| rf_default | 0.5293 | 0.4797 | 0.9028 | 0.0018 | 0.5000 |
-| rf_balanced | 0.6061 | 0.5904 | 0.6780 | 0.0098 | 0.5000 |
-| rf_default_oof_threshold | 0.7456 | 0.8155 | 0.5553 | 0.0229 | 0.2000 |
-| rf_balanced_oof_threshold | 0.7184 | 0.8192 | 0.4816 | 0.0309 | 0.2900 |
-| Best random_search (trial 35) | 0.7742 | 0.8376 | 0.5942 | 0.0201 | 0.1977 |
-| Best optuna_tpe (trial 2) | 0.7420 | 0.8339 | 0.5148 | 0.0276 | 0.2277 |
+| Dummy: luôn chọn lớp phổ biến nhất | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.5000 |
+| RF mặc định, ngưỡng 0.5 | 0.5293 | 0.4797 | 0.9028 | 0.0018 | 0.5000 |
+| RF cân bằng lớp, ngưỡng 0.5 | 0.6061 | 0.5904 | 0.6780 | 0.0098 | 0.5000 |
+| RF mặc định, ngưỡng OOF | 0.7456 | 0.8155 | 0.5553 | 0.0229 | 0.2000 |
+| RF cân bằng lớp, ngưỡng OOF | 0.7184 | 0.8192 | 0.4816 | 0.0309 | 0.2900 |
+| Tốt nhất của Random Search (lượt #35) | 0.7742 | 0.8376 | 0.5942 | 0.0201 | 0.1977 |
+| Tốt nhất của Optuna TPE (lượt #2) | 0.7420 | 0.8339 | 0.5148 | 0.0276 | 0.2277 |
 
-The locked final decision came from **random_search**, trial **35**, with `params_json={"class_weight": null, "max_depth": 12, "max_features": 0.75, "min_samples_leaf": 2, "min_samples_split": 10, "n_estimators": 100}` and threshold **0.197739**. Development OOF F₂ was **0.7742**, FPR **0.0201**. Refit fallback used: **False**.
-The methods found different best candidates in this run; one budget and one split do not establish general superiority.
+Chỉ số lượt thử được đánh số từ 0, giống cột `trial` trong log.
 
-**Held-out test, after development-only selection:** confusion matrix `[[1892, 40], [13, 55]]` (rows actual 0/1, columns predicted 0/1). F₂ **0.7493**, recall **0.8088**, precision **0.5789**, FPR **0.0207**, average precision/PR-AUC **0.8408**, accuracy **0.9735**. Final uncompressed size **1.117 MB** (limit 20.0 MB); paired latency ratio **0.951×** (limit 1.25×), with q25–q75 **0.898–1.017×**.
+Nghiệm cuối đã chốt thuộc **Random Search**, lượt **#35**, với `params_json={"class_weight": null, "max_depth": 12, "max_features": 0.75, "min_samples_leaf": 2, "min_samples_split": 10, "n_estimators": 100}` và ngưỡng **0.197739**. Trên OOF của tập phát triển, F₂ đạt **0.7742**, FPR **0.0201**. Phải chuyển sang nghiệm dự phòng sau khi huấn luyện lại: **Không**.
+Hai phương pháp tìm được các nghiệm tốt nhất khác nhau trong lần chạy này; một ngân sách và một cách chia dữ liệu chưa chứng minh ưu thế tổng quát của phương pháp nào.
 
-![Optimization history](results/full/figures/optimization_history.png)
+**Đánh giá trên tập kiểm tra sau khi chọn nghiệm chỉ bằng tập phát triển:** ma trận nhầm lẫn `[[1892, 40], [13, 55]]` (hàng là nhãn thực 0/1, cột là nhãn dự đoán 0/1). F₂ **0.7493**, độ bao phủ (Recall) **0.8088**, độ chính xác cảnh báo (Precision) **0.5789**, FPR **0.0207**, AP/PR-AUC **0.8408**, tỷ lệ dự đoán đúng (Accuracy) **0.9735**. Kích thước mô hình cuối không nén **1.117 MB** (giới hạn 20.0 MB); tỷ số độ trễ đo ghép cặp **0.951×** (giới hạn 1.25×), khoảng phân vị q25–q75 **0.898–1.017×**.
 
-![F₂ versus FPR](results/full/figures/f2_fpr.png)
+![Diễn biến tìm kiếm nghiệm khả thi tốt nhất](results/full/figures/optimization_history.png)
 
-See [sensitivity](results/full/sensitivity.csv), [stability](results/full/stability.csv), [ablation](results/full/ablation.csv), and [refit attempts](results/full/refit_attempts.csv).
+![Quan hệ giữa F₂ và tỷ lệ cảnh báo sai FPR](results/full/figures/f2_fpr.png)
+
+Xem [phân tích độ nhạy](results/full/sensitivity.csv), [độ ổn định](results/full/stability.csv), [thí nghiệm bổ sung đặc trưng](results/full/ablation.csv) và [các lần huấn luyện lại](results/full/refit_attempts.csv).
 <!-- GENERATED_RESULTS_END -->
 
-Read the final **12-page report** ([editable Word](report/bao_cao_do_an_ai4i.docx), [PDF](report/bao_cao_do_an_ai4i.pdf)) and **one-page defense summary** ([Word](report/tom_tat_bao_ve_1_trang.docx), [PDF](report/tom_tat_bao_ve_1_trang.pdf)). This is the single final document set. The report retains the supplied cover motif and four actual-run images, and covers all seven required sections.
+## Báo cáo và tài liệu bảo vệ
 
-The supplied cover identifies **Huỳnh Trí Minh — 24748020102035 — GVHD Nguyễn Thị Diễm Anh**. [Identity provenance](report/identity.json) records that source; the previous GitHub report contained placeholders, not conflicting names. No class code or LMS identifier was supplied. See the [current ZIP audit](report/archive_comparison.md) and [course requirement mapping](report/requirements_audit.md).
+Bộ tài liệu cuối gồm **báo cáo 12 trang** ([Word chỉnh sửa được](report/bao_cao_do_an_ai4i.docx), [PDF](report/bao_cao_do_an_ai4i.pdf)) và **tóm tắt bảo vệ 1 trang** ([Word](report/tom_tat_bao_ve_1_trang.docx), [PDF](report/tom_tat_bao_ve_1_trang.pdf)). Báo cáo giữ motif bìa và bốn hình thực nghiệm từ tài liệu được cung cấp, đồng thời trình bày đủ bảy mục giảng viên yêu cầu.
 
-## How to Run
+Bìa tài liệu gốc ghi **Huỳnh Trí Minh — MSSV 24748020102035 — GVHD Nguyễn Thị Diễm Anh**. [Thông tin đối chiếu danh tính](report/identity.json) ghi rõ nguồn; báo cáo GitHub cũ chỉ có trường chờ điền, không có tên cụ thể mâu thuẫn. Chưa có mã lớp hoặc mã LMS trong tài liệu được cung cấp. Xem thêm [đối chiếu ZIP gốc](report/archive_comparison.md) và [bảng đối chiếu yêu cầu môn học](report/requirements_audit.md).
 
-On Windows PowerShell with Python 3.14 and `uv` (adjust the Python version if supported by the pinned packages):
+## Hướng dẫn chạy và kiểm chứng
+
+Chạy các lệnh sau từ thư mục gốc của repo trên Windows PowerShell, với Python 3.14 và `uv`:
 
 ```powershell
 uv --cache-dir .uv-cache venv --python 3.14 .venv
@@ -70,58 +103,73 @@ uv --cache-dir .uv-cache pip install --python .venv\Scripts\python.exe -r requir
 .venv\Scripts\python.exe scripts\verify_results.py
 ```
 
-These two commands validate the committed experiment without changing files. To run a new experiment:
+Hai lệnh cuối kiểm chứng thực nghiệm đã lưu mà không sửa file. Để chạy một thực nghiệm mới:
 
 ```powershell
 .venv\Scripts\python.exe run.py
 ```
 
-`run.py` works from any working directory and creates a fresh timestamped directory in `results/runs/` by default; it refuses a nonempty output directory. Preserve `results/full` as the submitted run. For a development-only pilot, run `.venv\Scripts\python.exe run.py --pilot --trials 2`; pilot skips test. `--config`, `--data`, `--trials` and `--output-dir` are supported. Relative paths resolve from the project root. The official full run took 1,396.24 seconds; hardware and load affect subsequent timings.
+`run.py` có thể được gọi từ thư mục làm việc khác và mặc định tạo thư mục mới có dấu thời gian trong `results/runs/`; chương trình từ chối ghi vào thư mục đầu ra đã có nội dung. Giữ `results/full` làm thực nghiệm của bản nộp. Chạy thử chỉ trên tập phát triển bằng `.venv\Scripts\python.exe run.py --pilot --trials 2`; chế độ pilot hiện tại bỏ qua test. Chương trình hỗ trợ `--config`, `--data`, `--trials` và `--output-dir`; đường dẫn tương đối được tính từ gốc dự án. Thực nghiệm chính thức mất **1.396,24 giây**; phần cứng và tải hệ thống ảnh hưởng thời gian chạy lại.
 
-The report sources are editable in `scripts/build_report.py`. Rebuild documents from the submitted run with the extra reporting dependencies and Microsoft Word on Windows:
+### Tạo lại báo cáo
+
+Nội dung nguồn có thể chỉnh trong `scripts/build_report.py`. Để tạo lại tài liệu từ thực nghiệm đã nộp, cài thêm thư viện báo cáo và dùng Microsoft Word trên Windows:
 
 ```powershell
 uv --cache-dir .uv-cache pip install --python .venv\Scripts\python.exe -r requirements-report.txt
 .venv\Scripts\python.exe scripts\build_report.py --results-dir results/full --output-dir report
 powershell -NoProfile -File scripts\export_report.ps1
-# Inspect both exported PDFs before recording their actual source/output hashes.
+# Xem lại bố cục cả hai PDF trước khi ghi hash của nguồn và đầu ra thực tế.
 .venv\Scripts\python.exe scripts\build_report.py --finalize-pdfs
 .venv\Scripts\python.exe scripts\verify_results.py
 ```
 
-LibreOffice can also export DOCX to PDF; its layout must be inspected separately. Report generation is optional for checking the committed results. `--write-readme` explicitly regenerates only the marked results block after verification; the default verifier is read-only.
+Có thể xuất DOCX sang PDF bằng LibreOffice, nhưng cần kiểm tra riêng bố cục của bản xuất đó. Không cần tạo lại báo cáo để kiểm chứng kết quả đã lưu trong repo. Tùy chọn `--write-readme` chỉ tạo lại khối kết quả được đánh dấu sau khi kiểm tra dữ liệu; mặc định bộ kiểm chứng chỉ đọc file.
 
-`.gitattributes` enforces LF for text even when Windows has `core.autocrlf=true`. The CSV and JSON hashes are exact byte hashes; mismatches are rejected. [Migration evidence](data/eol_migration.json) records the old CRLF and current LF CSV hashes. The manifests retain the original experiment date/runtime; only packaging provenance changed. [Report metadata](report/build_metadata.json) hashes the actual logs, model, assets, source code and four DOCX/PDF outputs. A changed source or report requires a genuine rebuild, not disabling a check.
+### Chính sách xuống dòng và hash
 
-To produce an exact submission ZIP from a clean committed tree, run `python scripts/package_submission.py --output-dir ../submission`. It uses `git archive HEAD`, verifies every ZIP entry against the Git tree and writes a separate inventory with SHA-256 values. ZIPs are kept outside the repository to avoid a self-referential commit. GitHub's **Code → Download ZIP** is also available; a commit-specific archive is preferable for a fixed submission.
+`.gitattributes` bắt buộc văn bản dùng LF, kể cả khi Windows đặt `core.autocrlf=true`. Hash CSV và JSON được tính trên byte thực tế; mọi sai lệch đều bị từ chối. [Bằng chứng chuyển đổi](data/eol_migration.json) ghi hash CSV cũ dùng CRLF và hash hiện tại dùng LF. Manifest giữ nguyên ngày chạy và thời gian thực nghiệm gốc; chỉ cập nhật thông tin đóng gói. [Metadata báo cáo](report/build_metadata.json) lưu hash của log, mô hình, hình ảnh, mã nguồn tạo báo cáo và bốn file DOCX/PDF. Khi nguồn hoặc báo cáo thay đổi, cần tạo lại tài liệu và metadata tương ứng.
 
-`manifest.json` records Python, dependency versions, OS/processor, CPU setting, split, seed and wall time. The original log identifies an Intel64 Family 6 Model 154 Stepping 4 CPU and Windows 11, but does not record a commercial CPU name or RAM. No missing hardware details are inferred. The saved stability analysis changes RF seeds 42/43/44 while retaining folds and threshold; it is not three independent optimizer runs.
+### Tạo ZIP nộp bài
 
-## Repository Structure
+Từ bản làm việc đã commit và không có thay đổi chưa lưu, chạy:
 
-| Path | Contents |
+```powershell
+python scripts/package_submission.py --output-dir ../submission
+```
+
+Script dùng `git archive HEAD`, kiểm tra từng file trong ZIP với nội dung commit và ghi một danh sách kiểm kê SHA-256 riêng. ZIP nằm ngoài repo để tránh phải chứa chính bản thân nó trong commit. Có thể dùng **Code → Download ZIP** trên GitHub; để cố định bản nộp, nên tải theo một commit cụ thể.
+
+### Môi trường thực nghiệm
+
+`manifest.json` ghi phiên bản Python, thư viện, hệ điều hành/bộ xử lý, số luồng CPU, cách chia dữ liệu, seed và tổng thời gian chạy. Log gốc ghi CPU Intel64 Family 6 Model 154 Stepping 4 và Windows 11, nhưng không ghi tên thương mại CPU hay dung lượng RAM; không suy đoán các thông tin thiếu này. Phép kiểm tra độ ổn định chỉ đổi seed RF giữa 42/43/44, giữ nguyên fold và ngưỡng; đó không phải ba lần chạy độc lập toàn bộ thuật toán tìm kiếm.
+
+## Cấu trúc kho mã nguồn
+
+| Đường dẫn | Nội dung |
 |---|---|
-| `run.py`, `config.json`, `requirements.txt` | Entry point, full budget, pinned environment |
-| `src/` | Data audit, pipeline, paired timing and experiment |
-| `tests/` | Dataset, preprocessing, metric, timing and fallback checks |
-| `scripts/verify_results.py` | Artifact and README consistency check |
-| `results/full/`, `results/pilot/` | Official and clearly labelled pilot logs/figures |
-| `report/` | Final 12-page DOCX/PDF, one-page DOCX/PDF, source assets, audit and metadata |
-| `ai4i+2020+predictive+maintenance+dataset/` | Attributed original UCI CSV |
+| `run.py`, `config.json`, `requirements.txt` | Điểm chạy chính, cấu hình/ngân sách và phiên bản thư viện cố định |
+| `src/` | Kiểm tra dữ liệu, pipeline, đo độ trễ ghép cặp và thực nghiệm |
+| `tests/` | Kiểm thử dữ liệu, tiền xử lý, chỉ số đánh giá, thời gian và chọn nghiệm dự phòng |
+| `scripts/verify_results.py` | Đối chiếu tính nhất quán của kết quả, mô hình, báo cáo và README |
+| `scripts/package_submission.py` | Đóng gói ZIP từ commit và kiểm tra từng file |
+| `results/full/`, `results/pilot/` | Log và hình của thực nghiệm chính thức, lần chạy thử có nhãn rõ ràng |
+| `report/` | Báo cáo DOCX/PDF 12 trang, tóm tắt DOCX/PDF 1 trang, hình nguồn và tài liệu đối chiếu |
+| `ai4i+2020+predictive+maintenance+dataset/` | CSV UCI gốc có ghi nguồn |
 
-The raw ZIP, `.venv*`, `.uv-cache`, secrets, temporary files and other model binaries are excluded from Git. The verified official model is about 1.1 MB and is included with CSV/JSON results and figures, so the consistency check can load it after cloning. Commits in this reconstruction record real work done now; no historical dates are fabricated.
+Bản nộp không chứa ZIP gốc, môi trường `.venv*`, bộ nhớ đệm `.uv-cache` hoặc thông tin đăng nhập. Mô hình chính thức đã kiểm chứng có dung lượng khoảng **1,1 MB**, được lưu cùng kết quả CSV/JSON và hình để có thể tải và kiểm tra ngay sau khi clone. Các commit hoàn thiện ghi công việc thực tế tại thời điểm thực hiện; không giả tạo ngày trong quá khứ.
 
-## Limitations
+## Hạn chế
 
-- Synthetic data do not establish real-machine deployment performance, future-failure prediction, causal relationships or calibrated risk.
-- Random stratification tests similar rows, not temporal, machine-group or drift generalization. The development FPR cap does not guarantee future FPR.
-- A previous implementation's pilot **did inspect this same held-out test** before this reconstruction. No choice in the new search is based on that pilot result, but this history weakens a strictly blind interpretation. The current pilot skips test.
-- Paired median timing reduces transient order/load effects but cannot remove hardware dependence. Raw rounds and dispersion are retained; near-boundary feasibility may still vary.
-- Uncompressed `joblib` bytes are a file-size proxy, not RAM usage. Threshold-comparison overhead is omitted from the timed `predict_proba` call.
-- One split and one 40-trial budget do not establish general superiority of either optimizer. Nested evaluation and independent datasets would provide stronger evidence.
-- The six original commits are all dated **9 November 2026**. They do not demonstrate the required five-week progression; later completion commits record actual work and do not repair that historical gap. Dates and results are not fabricated.
-- LMS submission, profile pinning, administrative confirmation and the student's oral defense are not verified by this repository.
+- Dữ liệu tổng hợp chưa chứng minh hiệu quả triển khai trên máy thật, khả năng dự báo lỗi tương lai, quan hệ nhân quả hoặc mức rủi ro đã được hiệu chỉnh.
+- Chia ngẫu nhiên phân tầng đánh giá trên các hàng tương tự nhau, chưa kiểm tra tổng quát hóa theo thời gian, nhóm máy hoặc sự thay đổi phân bố dữ liệu. FPR trên tập phát triển không bảo đảm FPR trong tương lai.
+- **Pilot của triển khai cũ từng xem cùng tập test** trước lần hoàn thiện này. Quy trình tìm kiếm hiện tại không dùng kết quả test của pilot để chọn cấu hình, nhưng lịch sử đó làm suy yếu nhận định test hoàn toàn mù. Chế độ pilot hiện tại bỏ qua test.
+- Trung vị độ trễ đo ghép cặp giảm ảnh hưởng nhất thời của thứ tự chạy và tải nền, nhưng không loại bỏ sự phụ thuộc phần cứng. Các vòng đo thô và độ phân tán được giữ lại; nghiệm gần ranh giới độ trễ vẫn có thể đổi trạng thái khả thi khi đo lại.
+- Dung lượng `joblib` không nén là đại lượng thay thế cho kích thước lưu trữ, không phải mức dùng RAM. Thời gian so sánh với ngưỡng không nằm trong phép đo `predict_proba`.
+- Một cách chia dữ liệu và một ngân sách 40 lượt chưa chứng minh ưu thế tổng quát của optimizer nào. Kiểm định lồng nhau và dữ liệu độc lập sẽ cung cấp bằng chứng mạnh hơn.
+- Sáu commit ban đầu đều ngày **09/11/2026**, chưa chứng minh tiến độ 5 tuần theo yêu cầu. Các commit hoàn thiện sau đó không thể bù lại bằng chứng lịch sử này. Không sửa ngày hoặc giả tạo kết quả.
+- Việc nộp LMS, ghim repo trên hồ sơ GitHub, xác nhận thông tin hành chính và bảo vệ trực tiếp của sinh viên chưa được kiểm chứng bởi repo.
 
-## AI assistance
+## Công cụ AI hỗ trợ
 
-OpenAI Codex assisted with code review, tests, documentation and artifact generation. The student must inspect the source, reproduce the run, confirm the cover details and UCI attribution, and explain every decision during defense.
+OpenAI Codex hỗ trợ rà soát mã nguồn, kiểm thử, biên soạn tài liệu và tạo các file kết quả từ log. Sinh viên chịu trách nhiệm đọc hiểu mã, tái lập thực nghiệm, xác nhận thông tin bìa và nguồn UCI, đồng thời giải thích mọi quyết định khi bảo vệ.
