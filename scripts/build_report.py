@@ -94,6 +94,7 @@ def new_doc(brief=False):
     p.add_run('Huỳnh Trí Minh  •  ').font.size=Pt(9)
     fld=OxmlElement('w:fldSimple'); fld.set(qn('w:instr'),'PAGE'); p._p.append(fld)
     d.core_properties.author='Huỳnh Trí Minh'
+    d.core_properties.last_modified_by='Huỳnh Trí Minh'
     d.core_properties.title='Tối ưu Random Forest phát hiện lỗi máy'
     return d
 
@@ -192,7 +193,7 @@ def build(results,output):
         ['Chia dữ liệu','train_test_split stratify, test_size=0,2, seed=42'],
         ['Đánh giá development','StratifiedKFold(3, shuffle=True, random_state=42)'],
         ['Ngân sách','5 baseline + 40 Random Search + 40 TPE'],
-        ['Độ ổn định bổ sung','Seed mô hình 42,43,44; giữ fold và τ đã chốt']],10.5)
+        ['Độ ổn định bổ sung','Đổi seed RF và fold 42,43,44; giữ τ đã chốt']],10.5)
     para(d,'split_assignments.csv và fold_assignments.csv lưu từng chỉ số hàng. Chia tuần tự 70/15/15 chỉ là chẩn đoán: validation và test không có HDF; không dùng cho kết quả chính. Chia ngẫu nhiên chưa đo tổng quát hóa theo thời gian hoặc theo máy.')
     heading(d,'4.3. Môi trường và đo runtime',2)
     para(d,f'Log gốc: {m["runtime"]["platform"]}; CPU: {m["runtime"]["processor"]}; Python {m["runtime"]["python"]}. RF n_jobs=1, threadpool_limit=1. Log không có tên thương mại CPU/RAM nên không suy đoán. Phiên bản thư viện khóa trong requirements.txt và manifest.json.')
@@ -236,7 +237,7 @@ def build(results,output):
         ['Median predict_proba refit',f'{test["latency_ms_per_batch"]:.2f} ms / batch 256']],10.5)
     para(d,'Tổng fit không phải wall time mỗi optimizer: chưa gồm đo latency, chọn ngưỡng, ghi log và overhead. Log không tách wall time từng phương pháp; không suy ra optimizer nhanh/chậm từ tổng fit. Median tỷ số ghép cặp không bằng tỷ số hai median thời gian.',size=11)
     table(d,['Seed mô hình','F₂ OOF','Recall','FPR'],[[int(r.seed),f'{r.f2:.4f}',f'{r.recall:.4f}',f'{r.fpr:.4f}'] for _,r in stab.iterrows()],10.5)
-    para(d,f'F₂ trung bình {stab.f2.mean():.4f}, SD mẫu {stab.f2.std(ddof=1):.4f}, khoảng {stab.f2.min():.4f}–{stab.f2.max():.4f}. Giữ λ, τ, fold; chỉ đổi seed RF. Đây không phải ba lần chạy toàn search hoặc ba split độc lập. Chưa có khoảng tin cậy tổng quát cho ưu thế optimizer.',size=11)
+    para(d,f'F₂ trung bình {stab.f2.mean():.4f}, SD mẫu {stab.f2.std(ddof=1):.4f}, khoảng {stab.f2.min():.4f}–{stab.f2.max():.4f}. Giữ λ, τ; đổi seed RF và cách chia fold. Đây không phải ba lần chạy toàn search hoặc ba lần chia development/test độc lập. Chưa có khoảng tin cậy tổng quát cho ưu thế optimizer.',size=11)
     heading(d,'6.1. Độ nhạy theo giới hạn cảnh báo sai',2)
     chosen=sens[(sens.method==selected['method'])&(sens.trial==selected['trial'])]
     table(d,['FPR cap','τ','F₂ OOF','Recall','FP','FN'],[[f'{r.fpr_cap:.0%}',f'{r.threshold:.6f}',f'{r.f2:.4f}',f'{r.recall:.4f}',int(r.fp),int(r.fn)] for _,r in chosen.iterrows()],10.5)
@@ -300,7 +301,7 @@ def build(results,output):
         *[[f'{r.method} #{int(r.trial)}',f'{r.f2:.4f}',f'{r.recall:.4f}',f'{r.fpr:.4f}'] for r in best]],9.5)
     heading(brief,'Quyết định và minh chứng',2)
     para(brief,f'RS #35: 100 cây, depth 12, split 10, leaf 2, max_features 0.75, class_weight=None; τ={selected["threshold"]:.6f}. OOF tốt nhất khả thi; refit {test["model_size_mb"]:.3f} MB, {test["latency_ratio"]:.3f}×. Test [[1892,40],[13,55]]: F₂ {test["f2"]:.4f}, recall {test["recall"]:.4f}, precision {test["precision"]:.4f}. Không chọn theo test.')
-    para(brief,f'23/40 RS, 31/40 TPE khả thi; runtime {s["wall_seconds"]/60:.2f} phút. Seed 42/43/44: F₂ {stab.f2.mean():.4f} ± {stab.f2.std(ddof=1):.4f} (SD mẫu; giữ fold/τ). Cap 2% giảm FP OOF 155→117, tăng FN 44→51. RS #24 F₂ 0,7774 nhưng ratio 1,5985× nên loại.')
+    para(brief,f'23/40 RS, 31/40 TPE khả thi; runtime {s["wall_seconds"]/60:.2f} phút. Seed 42/43/44: F₂ {stab.f2.mean():.4f} ± {stab.f2.std(ddof=1):.4f} (SD mẫu; đổi seed RF và fold, giữ τ). Cap 2% giảm FP OOF 155→117, tăng FN 44→51. RS #24 F₂ 0,7774 nhưng ratio 1,5985× nên loại.')
     heading(brief,'Giới hạn và demo 5–7 phút',2)
     para(brief,'Dữ liệu tổng hợp, test đã được pilot xem, một budget/split; chưa chứng minh ưu thế tổng quát. Sáu commit cùng ngày không chứng minh 5 tuần. Demo: formulation (1 phút), pipeline/τ (2), bảng+2 hình+trade-off (2), verifier/giới hạn (1–2).')
     para(brief,'python -m unittest discover -s tests -v\npython scripts/verify_results.py',size=10,bold=True)
