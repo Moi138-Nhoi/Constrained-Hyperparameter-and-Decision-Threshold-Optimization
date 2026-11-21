@@ -36,7 +36,7 @@
     "results/full/stability.csv": "bb3fbba23d047db49677df8013394033d7a26d4f5b122ff367f93798a34b7af6",
     "results/full/summary.json": "4e2d126eb0ca7ed0230414329952e3fc636d9db85776736eddf17167465bff25",
     "results/full/trials.csv": "620605a4b88ede07a8f3e5e0e7af5b41272bda65e0eb0e87bfcc9e403cab5f80",
-    "scripts/build_report.py": "41fd2857057802cfce5184c182a94493415dd7633ea2df0908625a6ac68060b8",
+    "scripts/build_report.py": "e15661584590ba147160b964706dc25df344f5738fb49faa96d9df2a28691fe7",
     "scripts/export_report.ps1": "5830e6e72f056a58ff9a606b17b933b9c0a98eaf9de1b233a23829bf131ff669",
     "src/__init__.py": "f35180b4814cc6549ac23bc664ba831798966f15a5a70ec775a230b0786de09e",
     "src/data.py": "73b1bdd3ba3dacd489a1f59268a8332a9282f91b514598e0b94f6eeaf927d095",
@@ -45,10 +45,10 @@
     "src/modeling.py": "e12009d98663f907502b1b402333aa83ec6e58f3c16c194d3f63363e910f7e7f"
   },
   "output_hashes": {
-    "bao_cao_do_an_ai4i.docx": "f6b9648bb82554e15a86090aa518fb59879d3b6ce6ff375d8801e2eddda561b7",
-    "bao_cao_do_an_ai4i.pdf": "61d18141837e53d914a7475a81a97af1bd75f243accde670056a83193861d3a7",
-    "tom_tat_bao_ve_1_trang.docx": "7a5f6a382f233c5bea0abeb79f1b108cd7ec3545d6e333f7bd2f27313e1d6cf6",
-    "tom_tat_bao_ve_1_trang.pdf": "a87dd74055d7b863cb1b82baa2be2bd3a025de48e17f8712e7e5f6d586be375f"
+    "bao_cao_do_an_ai4i.docx": "02b04e48c2dfdff843efc05cd6d80015a85d820bcdb7f3b0dd688452b1ea6a91",
+    "bao_cao_do_an_ai4i.pdf": "5845bdbdbccab0bdcb1f49f0e0e1ffb79d8f0546ba1643bc1744e77deeddfa05",
+    "tom_tat_bao_ve_1_trang.docx": "c75bbb5632f63e28ef6c3c7668806110332d019def508d4b059d028b0c99561d",
+    "tom_tat_bao_ve_1_trang.pdf": "7544f93d2b8ab04644da7fc42105cfa33b67706c7cf9c0d6f5c783998dd86007"
   },
   "note": "PDFs exported from editable DOCX; retained official run, LF bytes, no retraining."
 }
