@@ -142,7 +142,7 @@ Script dùng `git archive HEAD`, kiểm tra từng file trong ZIP với nội du
 
 ### Môi trường thực nghiệm
 
-`manifest.json` ghi phiên bản Python, thư viện, hệ điều hành/bộ xử lý, số luồng CPU, cách chia dữ liệu, seed và tổng thời gian chạy. Log gốc ghi CPU Intel64 Family 6 Model 154 Stepping 4 và Windows 11, nhưng không ghi tên thương mại CPU hay dung lượng RAM; không suy đoán các thông tin thiếu này. Phép kiểm tra độ ổn định chỉ đổi seed RF giữa 42/43/44, giữ nguyên fold và ngưỡng; đó không phải ba lần chạy độc lập toàn bộ thuật toán tìm kiếm.
+`manifest.json` ghi phiên bản Python, thư viện, hệ điều hành/bộ xử lý, số luồng CPU, cách chia dữ liệu, seed và tổng thời gian chạy. Log gốc ghi CPU Intel64 Family 6 Model 154 Stepping 4 và Windows 11, nhưng không ghi tên thương mại CPU hay dung lượng RAM; không suy đoán các thông tin thiếu này. Phép kiểm tra độ ổn định đổi đồng thời seed RF và cách chia fold giữa 42/43/44, giữ nguyên tập development/test và ngưỡng; đó không phải ba lần chạy độc lập toàn bộ thuật toán tìm kiếm.
 
 ## Cấu trúc kho mã nguồn
 
